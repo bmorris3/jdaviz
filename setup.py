@@ -175,5 +175,5 @@ for (dirpath, dirnames, filenames) in os.walk('share/jupyter/'):
 
 
 setup(data_files=data_files, cmdclass={'develop': DevelopCmd},
-      use_scm_version={'write_to': os.path.join('jdaviz', 'version.py'),
+      use_scm_version={'root': '.', 'relative_to': __file__, 'write_to': os.path.join('jdaviz', 'version.py'),
                        'write_to_template': VERSION_TEMPLATE})
