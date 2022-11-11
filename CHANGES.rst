@@ -99,10 +99,10 @@ Bug Fixes
 - Prevent duplicate labels by changing duplicate number appended
   to label to max number (of duplicates) plus 1. [#1824]
 
-- Support for fitting spectral subsets with Cubeviz. [#1834]
-
 Cubeviz
 ^^^^^^^
+
+- Support for fitting spectral subsets with Cubeviz. [#1834]
 
 Imviz
 ^^^^^
