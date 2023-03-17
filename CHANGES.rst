@@ -4,7 +4,29 @@
 New Features
 ------------
 
-* Model fitting results are logged in a table within the plugin [#2093].
+- Model fitting results are logged in a table within the plugin [#2093].
+
+- CLI launchers no longer require data to be specified. [#1890]
+
+Cubeviz
+^^^^^^^
+
+Imviz
+^^^^^
+
+- Table exposing past results in the aperture photometry plugin. [#1985, #2015]
+
+- Preliminary support for Nancy Grace Roman Space Telescope ASDF data products [#1822]
+
+Mosviz
+^^^^^^
+
+- Configurations that support multiple, simultaneous data files now allow
+  multiple data products to be specified in the command line. [#1890]
+
+- Ability to cycle through datasets to expose information during mouseover. [#1953]
+
+- New markers plugin to log mouseover information to a table. [#1953]
 
 Cubeviz
 ^^^^^^^
