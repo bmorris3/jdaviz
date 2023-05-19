@@ -175,11 +175,22 @@ class Imviz(ImageConfigHelper):
 
         # find the current label(s) - TODO: replace this by calling default label functionality
         # above instead of having to refind it
-        applied_labels = [label for label in self.app.data_collection.labels if label not in prev_data_labels]  # noqa
+        applied_labels = []
+        applied_visible = []
+        for data in self.app.data_collection:
+            label = data.label
+            if label not in prev_data_labels:
+                applied_labels.append(label)
+                if not data.meta.get(self.app._wcs_only_label, False):
+                    applied_visible.append(True)
+                else:
+                    applied_visible.append(False)
 
         if show_in_viewer is True:
             show_in_viewer = f"{self.app.config}-0"
 
+        # NOTE: We will never try to batch load WCS-only, but if we do, add extra logic
+        #       in batch_load within core/helpers.py module.
         if self._in_batch_load and show_in_viewer:
             for applied_label in applied_labels:
                 self._delayed_show_in_viewer_labels[applied_label] = show_in_viewer
@@ -193,8 +204,8 @@ class Imviz(ImageConfigHelper):
             # NOTE: this will not add entries that were skipped with do_link=False
             # but the batch_load context manager will handle that logic
             if show_in_viewer:
-                for applied_label in applied_labels:
-                    self.app.add_data_to_viewer(show_in_viewer, applied_label)
+                for applied_label, visible in zip(applied_labels, applied_visible):
+                    self.app.add_data_to_viewer(show_in_viewer, applied_label, visible=visible)
         else:
             warnings.warn(AstropyDeprecationWarning("do_link=False is deprecated in v3.1 and will "
                                                     "be removed in a future release.  Use with "
