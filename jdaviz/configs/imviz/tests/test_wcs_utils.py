@@ -9,7 +9,6 @@ from gwcs import coordinate_frames as cf
 from numpy.testing import assert_allclose
 
 from jdaviz.configs.imviz import wcs_utils
-from jdaviz.configs.imviz.plugins.parsers import _wcsonly2data
 from jdaviz.configs.imviz.tests.utils import BaseImviz_WCS_GWCS
 
 
@@ -123,10 +122,8 @@ class TestWCSOnly(BaseImviz_WCS_GWCS):
             data_label="fits_wcs[DATA]",
             rotation_angle=5 * u.deg
         )
-        wcs_only_data_label = self.imviz.app._wcs_only_label
-        wcs_only_data = _wcsonly2data(ndd, wcs_only_data_label)
-        self.imviz.app.add_data(wcs_only_data, wcs_only_data_label)
-        self.imviz.app.add_data_to_viewer("imviz-0", wcs_only_data_label, visible=False)
+        self.imviz.load_data(ndd, data_label=self.imviz.app._wcs_only_label, show_in_viewer=False)
+        assert self.imviz.app.data_collection[3].label == self.imviz.app._wcs_only_label
 
         # Confirm that all data in collection are labeled.
         assert len(self.imviz.app.state.layer_icons) == 4  # 3 + 1
@@ -140,10 +137,8 @@ class TestWCSOnly(BaseImviz_WCS_GWCS):
             data_label="fits_wcs[DATA]",
             rotation_angle=45 * u.deg
         )
-        wcs_only_data_label_2 = "rot: 45.00 deg"
-        wcs_only_data_2 = _wcsonly2data(ndd2, wcs_only_data_label_2)
-        self.imviz.app.add_data(wcs_only_data_2, wcs_only_data_label_2)
-        self.imviz.app.add_data_to_viewer("imviz-0", wcs_only_data_label_2, visible=False)
+        self.imviz.load_data(ndd2, data_label="rot: 45.00 deg", show_in_viewer=False)
+        assert self.imviz.app.data_collection[4].label == "rot: 45.00 deg"
 
         # Confirm that all data in collection are labeled.
         assert len(self.imviz.app.data_collection) == 5  # 3 + 2
