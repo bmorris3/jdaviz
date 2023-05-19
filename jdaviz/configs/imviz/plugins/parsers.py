@@ -138,7 +138,10 @@ def get_image_data_iterator(app, file_obj, data_label, ext=None):
         data_iter = _hdu_to_glue_data(file_obj, data_label)
 
     elif isinstance(file_obj, NDData):
-        data_iter = _nddata_to_glue_data(file_obj, data_label)
+        if file_obj.meta.get(app._wcs_only_label, False):
+            data_iter = _wcsonly_to_glue_data(file_obj, data_label)
+        else:
+            data_iter = _nddata_to_glue_data(file_obj, data_label)
 
     elif isinstance(file_obj, np.ndarray):
         data_iter = _ndarray_to_glue_data(file_obj, data_label)
@@ -169,7 +172,8 @@ def _parse_image(app, file_obj, data_label, ext=None):
             # for outside_*_bounding_box should also be updated.
             data.coords._orig_bounding_box = data.coords.bounding_box
             data.coords.bounding_box = None
-        data_label = app.return_data_label(data_label, alt_name="image_data")
+        if not data.meta.get(app._wcs_only_label, False):
+            data_label = app.return_data_label(data_label, alt_name="image_data")
         app.add_data(data, data_label)
 
     # Do not run link_image_data here. We do it at the end in Imviz.load_data()
@@ -406,12 +410,12 @@ def _ndarray_to_glue_data(arr, data_label):
 
 # ---- Functions that handle WCS-only data -----
 
-def _wcsonly2data(ndd, data_label):
-    """Return Data given NDData containly WCS-only data."""
+def _wcsonly_to_glue_data(ndd, data_label):
+    """Return Data given NDData containing WCS-only data."""
     arr = ndd.data
     data = Data(label=data_label)
     data.meta.update(standardize_metadata(ndd.meta))
     data.coords = ndd.wcs
     component = Component.autotyped(arr, units="")
     data.add_component(component=component, label="DATA")
-    return data
+    yield (data, data_label)
