@@ -16,7 +16,7 @@
       :tooltipcontent=dataMenuTooltip
       span_style="font-size: 12pt; padding-top: 6px; width: calc(100% - 80px); white-space: nowrap; cursor: default;">
     <span
-      style="cursor: pointer;"
+      :style="dataMenuTooltip !== null ? 'cursor: pointer;' : 'cursor: default;'"
       @click="selectRefData"
     >
       <j-layer-viewer-icon span_style="margin-left: 4px;" :icon="icon" color="#000000DE" :is_ref_data="isRefData()"></j-layer-viewer-icon>
