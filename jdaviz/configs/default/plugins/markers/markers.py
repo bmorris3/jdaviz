@@ -2,7 +2,7 @@ import numpy as np
 from traitlets import observe
 
 from jdaviz.core.events import ViewerAddedMessage
-from jdaviz.core.marks import MarkersMark
+from jdaviz.core.marks import MarkersMark, CircleMark, PluginMark
 from jdaviz.core.registries import tray_registry
 from jdaviz.core.template_mixin import PluginTemplateMixin, ViewerSelectMixin, TableMixin
 from jdaviz.core.user_api import PluginUserApi
@@ -89,10 +89,11 @@ class Markers(PluginTemplateMixin, ViewerSelectMixin, TableMixin):
         self._create_viewer_callbacks(self.app.get_viewer_by_id(msg.viewer_id))
 
     def _get_mark(self, viewer):
-        matches = [mark for mark in viewer.figure.marks if isinstance(mark, MarkersMark)]
+        matches = [mark for mark in viewer.figure.marks if isinstance(mark, PluginMark)]
         if len(matches):
             return matches[0]
-        mark = MarkersMark(viewer)
+        #mark = MarkersMark(viewer)
+        mark = CircleMark(viewer)
         viewer.figure.marks = viewer.figure.marks + [mark]
         return mark
 
