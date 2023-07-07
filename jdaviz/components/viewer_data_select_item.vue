@@ -19,8 +19,7 @@
       :style="dataMenuTooltip !== null ? 'cursor: pointer;' : 'cursor: default;'"
       @click="selectRefData"
     >
-      <j-layer-viewer-icon span_style="margin-left: 4px;" :icon="icon" color="#000000DE" :is_ref_data="isRefData()"></j-layer-viewer-icon>
-
+      <j-layer-viewer-icon span_style="margin-left: 4px;" :icon="icon" color="#000000DE" :is_ref_data="isRefData()" :linked_by_wcs="linkedByWcs()"></j-layer-viewer-icon>
       <div class="text-ellipsis-middle" style="font-weight: 500;">
         <span>
           {{itemNamePrefix}}
@@ -78,7 +77,7 @@ module.exports = {
       })
     },
     selectRefData() {
-      if (!this.isRefData() && this.$props.item.type === 'wcs-only') {
+      if (this.linkedByWcs() && !this.isRefData() && this.isWCSOnly()) {
         this.$emit('change-reference-data', {
           id: this.$props.viewer.id,
           item_id: this.$props.item.id
@@ -87,6 +86,12 @@ module.exports = {
     },
     isRefData() {
       return this.$props.viewer.reference_data_label == this.$props.item.name
+    },
+    linkedByWcs() {
+      return this.$props.viewer.linked_by_wcs
+    },
+    isWCSOnly() {
+      return this.$props.item.type === 'wcs-only'
     }
   },
   computed: {
@@ -101,7 +106,7 @@ module.exports = {
     itemNameExtension() {
       if (this.$props.item.name.indexOf("[") !== -1) {
         // return the LAST [ and everything FOLLOWING
-        return '['+this.$props.item.name.split('[').slice(-1)
+        return '[' + this.$props.item.name.split('[').slice(-1)
       } else {
         return ''
       }
@@ -133,7 +138,7 @@ module.exports = {
         } else if (this.$props.viewer.reference === 'mask-viewer') {
           return this.$props.item.name.indexOf('[MASK]') === -1
         } else if (this.$props.viewer.reference === 'spectrum-viewer') {
-          return this.$props.item.name.indexOf('[FLUX]') === -1          
+          return this.$props.item.name.indexOf('[FLUX]') === -1
         }
       } else if (this.$props.viewer.config === 'specviz2d') {
         if (this.$props.viewer.reference === 'spectrum-2d-viewer') {
@@ -169,9 +174,9 @@ module.exports = {
       }
     },
     dataMenuTooltip() {
-      if (this.$props.viewer.config === 'imviz' && this.isRefData()) {
+      if (this.linkedByWcs() && this.$props.viewer.config === 'imviz' && this.isRefData()) {
         return 'Current viewer orientation'
-      } else if (this.$props.viewer.config === 'imviz' && this.$props.item.type === 'wcs-only') {
+      } else if (this.linkedByWcs() && this.$props.viewer.config === 'imviz' && this.$props.item.type === 'wcs-only') {
         return 'Set viewer orientation'
       } else {
         return null
