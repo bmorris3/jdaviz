@@ -1282,7 +1282,12 @@ class LayerSelect(SelectPluginComponent):
         viewers = [self._get_viewer(viewer) for viewer in viewer_names]
 
         manual_items = [{'label': label} for label in self.manual_options]
-        layers = [layer for viewer in viewers for layer in getattr(viewer, 'layers', [])]
+        layers = [
+            layer for viewer in viewers
+            for layer in getattr(viewer, 'layers', [])
+            # don't include WCS-only layers:
+            if not layer.layer.meta.get('_WCS_ONLY', False)
+        ]
         # remove duplicates - NOTE: by doing this, any color-mismatch between layers with the
         # same name in different viewers will be randomly assigned within plot_options
         # based on which was found _first.
