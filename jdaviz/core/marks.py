@@ -3,9 +3,13 @@ import numpy as np
 from astropy import units as u
 from bqplot import LinearScale
 from bqplot.marks import Lines, Label, Scatter
+from bqplot.traits import (
+    array_serialization, array_dimension_bounds, array_squeeze
+)
 from copy import deepcopy
 from glue.core import HubListener
 from specutils import Spectrum1D
+from traittypes import Array
 
 from jdaviz.core.events import GlobalDisplayUnitChanged
 from jdaviz.core.events import (SliceToolStateMessage, LineIdentifyMessage,
@@ -584,6 +588,33 @@ class PluginScatter(Scatter, PluginMark, HubListener):
         super().__init__(x=x, y=y, colors=["#007BA1"], scales=viewer.scales, **kwargs)
 
 
+class PluginScatterCircle(Scatter, PluginMark, HubListener):
+    rotation = Array().tag(sync=True, scaled=True,
+                                                rtype='Number',
+                                                **array_serialization)\
+        .valid(array_squeeze, array_dimension_bounds(1, 1))
+
+    def __init__(self, viewer, x=[], y=[], **kwargs):
+        viewer.scales = {
+            **viewer.scales,
+            'rotation': LinearScale(min=0, max=360),
+            'size': LinearScale(),
+            'skew': LinearScale(min=0, max=1)
+        }
+        # color is same blue as import button
+        super().__init__(
+            x=x, y=y,
+            rotation=np.zeros_like(x),
+            marker='circle',
+            fill=False,
+            stroke="#007BA1",
+            stroke_width=2,
+            scales=viewer.scales,
+            enable_move=True,
+            **kwargs
+        )
+
+
 class LineAnalysisContinuum(PluginLine):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -627,3 +658,9 @@ class MarkersMark(PluginScatter):
     def __init__(self, viewer, **kwargs):
         kwargs.setdefault('marker', 'circle')
         super().__init__(viewer, **kwargs)
+
+
+class CircleMark(PluginScatterCircle):
+    def __init__(self, viewer, **kwargs):
+        super().__init__(viewer, **kwargs)
+
