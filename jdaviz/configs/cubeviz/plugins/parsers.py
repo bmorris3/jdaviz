@@ -13,6 +13,13 @@ from specutils import Spectrum1D
 from jdaviz.core.registries import data_parser_registry
 from jdaviz.utils import standardize_metadata, PRIHDR_KEY
 
+try:
+    from roman_datamodels import datamodels as rdd
+except ImportError:
+    HAS_ROMAN_DATAMODELS = False
+else:
+    HAS_ROMAN_DATAMODELS = True
+
 __all__ = ['parse_data']
 
 EXT_TYPES = dict(flux=['flux', 'sci', 'data'],
@@ -63,6 +70,26 @@ def parse_data(app, file_obj, data_type=None, data_label=None):
             _parse_gif(app, file_obj, data_label,
                        flux_viewer_reference_name=flux_viewer_reference_name,
                        spectrum_viewer_reference_name=spectrum_viewer_reference_name)
+            return
+        elif file_obj.lower().endswith('.asdf'):
+            if not HAS_ROMAN_DATAMODELS:
+                raise ImportError(
+                    "ASDF detected but roman-datamodels is not installed."
+                )
+            with rdd.open(file_obj) as pf:
+                _roman_3d_to_glue_data(
+                    app, pf, data_label,
+                    flux_viewer_reference_name=flux_viewer_reference_name,
+                    spectrum_viewer_reference_name=spectrum_viewer_reference_name,
+                    uncert_viewer_reference_name=uncert_viewer_reference_name
+                )
+
+            # If we make it here, this Cubeviz is displaying a Roman ramp file.
+            # If the default Cubeviz viewers are still their defaults, rename them:
+            if 'group-viewer' not in app.get_viewer_reference_names():
+                app.update_viewer_reference_name('flux-viewer', 'group-viewer')
+                app.update_viewer_reference_name('uncert-viewer', 'diff-group-viewer')
+                app.update_viewer_reference_name('spectrum-viewer', 'int-viewer')
             return
 
         file_name = os.path.basename(file_obj)
@@ -447,3 +474,53 @@ def _get_data_type_by_hdu(hdu):
     else:
         data_type = ''
     return data_type
+
+
+def _roman_3d_to_glue_data(
+    app, file_obj, data_label,
+    flux_viewer_reference_name=None,
+    spectrum_viewer_reference_name=None,
+    uncert_viewer_reference_name=None,
+):
+    """
+    Parse a Roman 3D ramp cube file (Level 1),
+    usually with suffix '_uncal.asdf'.
+    """
+    def _swap_axes(x):
+        # swap axes per the conventions of Roman cubes
+        # (group axis comes first) and the default in
+        # Cubeviz (wavelength axis expected last)
+        return np.swapaxes(x, 0, -1)
+
+    data = file_obj.data
+
+    if data_label is None:
+        data_label = app.return_data_label(file_obj)
+
+    # last axis is the group axis, first two are spatial axes:
+    diff_data = np.dstack([
+        # begin with a group of zeros, so
+        # that `diff_data.ndim == data.ndim`
+        np.zeros_like(data[..., 0]),
+        np.diff(data, axis=-1)
+    ])
+
+    # load the `data` cube into what's usually the "flux-viewer"
+    _parse_ndarray(
+        app,
+        file_obj=_swap_axes(data),
+        data_label=f"{data_label}[DATA]",
+        data_type="flux",
+        flux_viewer_reference_name=flux_viewer_reference_name,
+        spectrum_viewer_reference_name=spectrum_viewer_reference_name
+    )
+
+    # load the diff of the data cube
+    # into what's usually the "uncert-viewer"
+    _parse_ndarray(
+        app,
+        file_obj=_swap_axes(diff_data),
+        data_type="uncert",
+        data_label=f"{data_label}[DIFF]",
+        uncert_viewer_reference_name=uncert_viewer_reference_name
+    )
