@@ -153,6 +153,14 @@ def parse_data(app, file_obj, data_type=None, data_label=None):
                        flux_viewer_reference_name=flux_viewer_reference_name,
                        spectrum_viewer_reference_name=spectrum_viewer_reference_name,
                        uncert_viewer_reference_name=uncert_viewer_reference_name)
+    elif HAS_ROMAN_DATAMODELS and isinstance(file_obj, rdd.DataModel):
+        with rdd.open(file_obj) as pf:
+            _roman_3d_to_glue_data(
+                app, pf, data_label,
+                flux_viewer_reference_name=flux_viewer_reference_name,
+                spectrum_viewer_reference_name=spectrum_viewer_reference_name,
+                uncert_viewer_reference_name=uncert_viewer_reference_name
+            )
     else:
         raise NotImplementedError(f'Unsupported data format: {file_obj}')
 
@@ -491,6 +499,9 @@ def _roman_3d_to_glue_data(
         # (group axis comes first) and the default in
         # Cubeviz (wavelength axis expected last)
         return np.swapaxes(x, 0, -1)
+
+    # update viewer reference names for Roman ramp cubes:
+    # app._update_viewer_reference_name()
 
     data = file_obj.data
 
