@@ -83,13 +83,6 @@ def parse_data(app, file_obj, data_type=None, data_label=None):
                     spectrum_viewer_reference_name=spectrum_viewer_reference_name,
                     uncert_viewer_reference_name=uncert_viewer_reference_name
                 )
-
-            # If we make it here, this Cubeviz is displaying a Roman ramp file.
-            # If the default Cubeviz viewers are still their defaults, rename them:
-            if 'group-viewer' not in app.get_viewer_reference_names():
-                app.update_viewer_reference_name('flux-viewer', 'group-viewer')
-                app.update_viewer_reference_name('uncert-viewer', 'diff-group-viewer')
-                app.update_viewer_reference_name('spectrum-viewer', 'int-viewer')
             return
 
         file_name = os.path.basename(file_obj)
@@ -509,11 +502,11 @@ def _roman_3d_to_glue_data(
         data_label = app.return_data_label(file_obj)
 
     # last axis is the group axis, first two are spatial axes:
-    diff_data = np.dstack([
+    diff_data = np.vstack([
         # begin with a group of zeros, so
         # that `diff_data.ndim == data.ndim`
-        np.zeros_like(data[..., 0]),
-        np.diff(data, axis=-1)
+        np.zeros((1, *data[0].shape)),
+        np.diff(data, axis=0)
     ])
 
     # load the `data` cube into what's usually the "flux-viewer"
@@ -535,3 +528,32 @@ def _roman_3d_to_glue_data(
         data_label=f"{data_label}[DIFF]",
         uncert_viewer_reference_name=uncert_viewer_reference_name
     )
+
+    # If the default Cubeviz viewers are still their defaults, rename them to
+    # names that are appropriate for the Roman ramp files that we just parsed:
+    if 'flux-viewer' in app.get_viewer_reference_names():
+        app._update_viewer_reference_name('flux-viewer', 'group-viewer')
+        app._update_viewer_reference_name('uncert-viewer', 'group-diff-viewer')
+        app._update_viewer_reference_name('spectrum-viewer', 'integration-viewer')
+
+    # the default collapse function in the profile viewer is "sum",
+    # but for ramp files, "median" is more useful:
+    viewer = app.get_viewer('integration-viewer')
+    viewer.state.function = 'median'
+
+    # some Cubeviz plugins aren't relevant for ramps, so remove them:
+    remove_tray_items = [
+        'g-line-list',
+        'specviz-line-analysis',
+        'cubeviz-moment-maps',
+        'g-gaussian-smooth'
+    ]
+
+    for item_name in remove_tray_items:
+        item_names = [
+            tray_item['name'] for tray_item in app.state.tray_items
+        ]
+
+        app.state.tray_items.pop(
+            item_names.index(item_name)
+        )

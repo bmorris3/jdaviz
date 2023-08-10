@@ -58,7 +58,7 @@
       </v-col>
     </v-row>
 
-    <v-row class="row-no-outside-padding">
+    <v-row class="row-no-outside-padding" v-if="wavelength_unit !== 'pix'">
       <v-col>
         <v-text-field
           v-model="wavelength"
