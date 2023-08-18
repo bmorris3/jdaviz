@@ -26,6 +26,7 @@ EXT_TYPES = dict(flux=['flux', 'sci', 'data'],
                  uncert=['ivar', 'err', 'var', 'uncert'],
                  mask=['mask', 'dq', 'quality'])
 
+cubeviz_ramp_meta_flag = '_roman_ramp'
 
 @data_parser_registry("cubeviz-data-parser")
 def parse_data(app, file_obj, data_type=None, data_label=None):
