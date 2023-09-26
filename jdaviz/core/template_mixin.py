@@ -1244,7 +1244,6 @@ class LayerSelect(SelectPluginComponent):
                  multiselect=None,
                  default_text=None, manual_options=[],
                  default_mode='first',
-                 include_wcs=False,
                  only_wcs_layers=False):
         """
         Parameters
@@ -1276,7 +1275,6 @@ class LayerSelect(SelectPluginComponent):
                          manual_options=manual_options,
                          default_mode=default_mode)
 
-        self.include_wcs = include_wcs
         self.only_wcs_layers = only_wcs_layers
 
         self.hub.subscribe(self, AddDataMessage,
@@ -1433,8 +1431,7 @@ class LayerSelect(SelectPluginComponent):
                 # don't include WCS-only layers unless asked:
                 if (
                     not hasattr(layer.layer, 'meta') or
-                    (not layer.layer.meta.get('_WCS_ONLY', False)
-                     or self.include_wcs)
+                    (not layer.layer.meta.get('_WCS_ONLY', False))
                 )
             ]
         else:
