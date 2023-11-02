@@ -473,6 +473,8 @@ class AstrowidgetsImageViewerMixin:
                 jglue.data_collection[marker_name] = t_glue
                 jglue.add_link(t_glue, 'ra', image, ra_str)
                 jglue.add_link(t_glue, 'dec', image, dec_str)
+        elif self.jdaviz_app.config == "imviz" and self.jdaviz_app._link_type == "wcs":
+            raise TypeError("Cannot add markers in pixel space when linked by WCS.")
         else:
             t_glue = Data(marker_name, **table[x_colname, y_colname])
             with jglue.data_collection.delay_link_manager_update():

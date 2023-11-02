@@ -1,6 +1,7 @@
 import pytest
-from astropy.table import Table
 import astropy.units as u
+from astropy.coordinates import SkyCoord
+from astropy.table import Table
 from astropy.wcs import WCS
 from glue.core.link_helpers import LinkSame
 from glue.plugins.wcs_autolinking.wcs_autolinking import AffineLink, OffsetLink
@@ -119,8 +120,8 @@ class TestLink_WCS_WCS(BaseImviz_WCS_WCS, BaseLinkHandler):
                                  PolygonPixelRegion(vertices=PixCoord(x=[2, 3, 3], y=[2, 2, 3]))])
 
         # Add markers.
-        tbl = Table({'x': (0, 0), 'y': (0, 1)})
-        self.viewer.add_markers(tbl, marker_name='xy_markers')
+        tbl = Table({'coord': [SkyCoord(337.5203, -20.8333, unit="deg")]})
+        self.viewer.add_markers(tbl, use_skycoord=True, marker_name='xy_markers')
         assert 'xy_markers' in self.imviz.app.data_collection.labels
 
         # linking shouldn't be possible now because astrowidgets creates a data entry
