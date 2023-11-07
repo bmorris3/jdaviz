@@ -438,11 +438,10 @@ def _prepare_rotated_nddata(real_image_shape, wcs, rotation_angle, refdata_shape
         image_shape=real_image_shape
     )
 
-    # create a fake NDData (we use arange so data boundaries show up in Imviz
-    # if it ever is accidentally exposed) with the rotated GWCS:
-    sequential_data = np.arange(
-        np.prod(refdata_shape), dtype=np.int8
-    ).reshape(refdata_shape)
+    # create a fake NDData with the rotated GWCS:
+    sequential_data = np.nan * np.empty(
+        refdata_shape, dtype=np.int8
+    )
 
     ndd = NDData(
         data=sequential_data,
