@@ -1202,7 +1202,7 @@ class LayerSelect(SelectPluginComponent):
                  multiselect=None,
                  default_text=None, manual_options=[],
                  default_mode='first',
-                 only_wcs_layers=False):
+                 filters=['is_not_wcs_only']):
         """
         Parameters
         ----------
@@ -1223,7 +1223,6 @@ class LayerSelect(SelectPluginComponent):
             ``default`` text is provided but not in ``manual_options`` it will still be included as
             the first item in the list.
         """
-
         super().__init__(plugin,
                          items=items,
                          selected=selected,
@@ -1232,8 +1231,6 @@ class LayerSelect(SelectPluginComponent):
                          default_text=default_text,
                          manual_options=manual_options,
                          default_mode=default_mode)
-
-        self.only_wcs_layers = only_wcs_layers
 
         self.hub.subscribe(self, AddDataMessage,
                            handler=lambda _: self._on_layers_changed())
@@ -1249,7 +1246,7 @@ class LayerSelect(SelectPluginComponent):
 
         self.app.state.add_callback('layer_icons', lambda _: self._on_layers_changed())
         self.add_observe(viewer, self._on_viewer_changed)
-        self._on_layers_changed()
+        self.filters = filters
 
     def _get_viewer(self, viewer):
         # newer will likely be the viewer name in most cases, but viewer id in the case
@@ -1276,6 +1273,15 @@ class LayerSelect(SelectPluginComponent):
             self._clear_cache()
             self._on_layers_changed()
 
+    def _is_valid_item(self, layer):
+        def is_wcs_only(layer):
+            return hasattr(layer.layer, 'meta') and layer.layer.meta.get('_WCS_ONLY', False)
+
+        def is_not_wcs_only(layer):
+            return not is_wcs_only(layer)
+
+        return super()._is_valid_item(layer, locals())
+
     @observe('filters')
     def _on_layers_changed(self, msg=None):
         # NOTE: _on_layers_changed is passed without a msg object during init
@@ -1289,23 +1295,9 @@ class LayerSelect(SelectPluginComponent):
 
         # use getattr so the super() call above doesn't try to access the attr before
         # it is initialized:
-        if not getattr(self, 'only_wcs_layers', False):
-            layers = [
-                layer for viewer in viewers
-                for layer in getattr(viewer, 'layers', [])
-                # don't include WCS-only layers unless asked:
-                if (
-                    not hasattr(layer.layer, 'meta') or
-                    (not layer.layer.meta.get('_WCS_ONLY', False))
-                )
-            ]
-        else:
-            layers = [
-                layer for viewer in viewers
-                for layer in getattr(viewer, 'layers', [])
-                # only include WCS-only layers:
-                if not hasattr(layer.layer, 'meta') or layer.layer.meta.get('_WCS_ONLY', False)
-            ]
+        layers = [layer for viewer in viewers for layer in getattr(viewer, 'layers', [])
+                  if self._is_valid_item(layer)]
+
         # remove duplicates - NOTE: by doing this, any color-mismatch between layers with the
         # same name in different viewers will be randomly assigned within plot_options
         # based on which was found _first.

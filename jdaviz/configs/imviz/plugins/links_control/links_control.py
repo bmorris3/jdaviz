@@ -98,7 +98,7 @@ class LinksControl(PluginTemplateMixin, ViewerSelectMixin):
 
         self.layer = LayerSelect(
             self, 'layer_items', 'layer_selected', 'viewer_selected',
-            'multiselect', only_wcs_layers=True
+            'multiselect', filters=['is_wcs_only']
         )
         self.orientation_layer_label = AutoTextField(
             self, 'new_layer_label', 'new_layer_label_default', 'new_layer_label_auto', None
