@@ -94,7 +94,7 @@ class Orientation(PluginTemplateMixin, ViewerSelectMixin):
         self.link_type = SelectPluginComponent(self,
                                                items='link_type_items',
                                                selected='link_type_selected',
-                                               manual_options=['WCS', 'Pixels'])
+                                               manual_options=['Pixels', 'WCS'])
 
         self.orientation = LayerSelect(
             self, 'orientation_layer_items', 'orientation_layer_selected', 'viewer_selected',
