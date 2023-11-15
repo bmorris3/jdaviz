@@ -351,6 +351,20 @@ div.output_wrapper {
   padding-right: 12px !important;
 }
 
+.tray-plugin .v-alert {
+  padding: 8px;
+  line-height: normal;
+  font-size: small;
+}
+
+.v-alert.warning {
+  color: black !important;
+}
+
+.v-alert.warning .v-icon {
+  color: black;
+}
+
 a:link {
   text-decoration: none;
 }
