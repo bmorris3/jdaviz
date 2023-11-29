@@ -1,50 +1,48 @@
+import operator
 import os
 import pathlib
 import re
 import uuid
 import warnings
 from inspect import isclass
-import operator
 
-from ipywidgets import widget_serialization
 import ipyvue
-
+import matplotlib.cm as cm
+import numpy as np
 from astropy import units as u
 from astropy.nddata import CCDData, NDData
 from astropy.io import fits
 from astropy.time import Time
 from astropy.utils.decorators import deprecated
 from echo import CallbackProperty, DictCallbackProperty, ListCallbackProperty
-from ipygoldenlayout import GoldenLayout
-from ipysplitpanes import SplitPanes
-from traitlets import Dict, Bool, Unicode, Any
-from specutils import Spectrum1D, SpectralRegion
-import matplotlib.cm as cm
-import numpy as np
-
-from glue.core.exceptions import IncompatibleAttribute
-from glue.config import colormaps, data_translator
-from glue.config import settings as glue_settings
+from glue.config import colormaps, data_translator, settings as glue_settings
 from glue.core import BaseData, HubListener, Data, DataCollection
+from glue.core.exceptions import IncompatibleAttribute
 from glue.core.link_helpers import LinkSame, LinkSameWithUnits
 from glue.core.message import (DataCollectionAddMessage,
                                DataCollectionDeleteMessage,
                                SubsetCreateMessage,
                                SubsetUpdateMessage,
                                SubsetDeleteMessage)
+from glue.core.roi import CircularROI, CircularAnnulusROI, EllipticalROI, RectangularROI
 from glue.core.state_objects import State
 from glue.core.subset import (Subset, RangeSubsetState, RoiSubsetState,
                               CompositeSubsetState, InvertState)
-from glue.core.roi import CircularROI, CircularAnnulusROI, EllipticalROI, RectangularROI
 from glue.core.units import unit_converter
 from glue_astronomy.spectral_coordinates import SpectralCoordinates
 from glue_astronomy.translators.regions import roi_subset_state_to_region
 from glue_jupyter.app import JupyterApplication
-from glue_jupyter.common.toolbar_vuetify import read_icon
 from glue_jupyter.bqplot.common.tools import TrueCircularROI
-from glue_jupyter.state_traitlets_helpers import GlueState
 from glue_jupyter.bqplot.profile import BqplotProfileView
+from glue_jupyter.common.toolbar_vuetify import read_icon
+from glue_jupyter.state_traitlets_helpers import GlueState
+from ipygoldenlayout import GoldenLayout
+from ipypopout import PopoutButton
+from ipysplitpanes import SplitPanes
 from ipyvuetify import VuetifyTemplate
+from ipywidgets import widget_serialization
+from traitlets import Dict, Bool, Unicode, Any
+from specutils import Spectrum1D, SpectralRegion
 
 from jdaviz import __version__
 from jdaviz.core.config import read_configuration, get_configuration
@@ -53,12 +51,12 @@ from jdaviz.core.events import (LoadDataMessage, NewViewerMessage, AddDataMessag
                                 AddDataToViewerMessage, RemoveDataFromViewerMessage,
                                 ViewerAddedMessage, ViewerRemovedMessage,
                                 ViewerRenamedMessage, ChangeRefDataMessage)
-from jdaviz.core.style_widget import StyleWidget
 from jdaviz.core.registries import (tool_registry, tray_registry, viewer_registry,
                                     data_parser_registry)
+from jdaviz.core.style_widget import StyleWidget
 from jdaviz.core.tools import ICON_DIR
-from jdaviz.utils import SnackbarQueue, alpha_index, data_has_valid_wcs, MultiMaskSubsetState
-from ipypopout import PopoutButton
+from jdaviz.utils import (SnackbarQueue, alpha_index, data_has_valid_wcs, layer_is_table_data,
+                          MultiMaskSubsetState)
 
 __all__ = ['Application', 'ALL_JDAVIZ_CONFIGS']
 
@@ -2397,6 +2395,7 @@ class Application(VuetifyTemplate, HubListener):
             'ndims': data.ndim,
             'type': typ,
             'has_wcs': data_has_valid_wcs(data),
+            'is_astrowidgets_markers_table': (self.config == "imviz") and layer_is_table_data(data),
             'meta': {k: v for k, v in data.meta.items() if _expose_meta(k)},
             'children': []}
 
