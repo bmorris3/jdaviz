@@ -1429,9 +1429,9 @@ class LayerSelect(SelectPluginComponent):
                 layer for viewer in self.viewer_objs
                 for layer in getattr(viewer, 'layers', [])
                 # don't include WCS-only layers unless asked:
-                if (
-                    not hasattr(layer.layer, 'meta') or
-                    (not layer.layer.meta.get('_WCS_ONLY', False))
+                if not hasattr(layer.layer, 'meta') or (
+                    hasattr(layer.layer, 'meta') and
+                    not layer.layer.meta.get('_WCS_ONLY', False)
                 )
             ]
         else:
@@ -1439,7 +1439,10 @@ class LayerSelect(SelectPluginComponent):
                 layer for viewer in self.viewer_objs
                 for layer in getattr(viewer, 'layers', [])
                 # only include WCS-only layers:
-                if not hasattr(layer.layer, 'meta') or layer.layer.meta.get('_WCS_ONLY', False)
+                if (
+                    hasattr(layer.layer, 'meta') and
+                    layer.layer.meta.get('_WCS_ONLY', False)
+                )
             ]
         # remove duplicates - we'll loop back through all selected viewers to get a list of colors
         # and visibilities later within _layer_to_dict
