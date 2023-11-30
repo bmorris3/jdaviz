@@ -375,7 +375,6 @@ class Orientation(PluginTemplateMixin, ViewerSelectMixin):
                 if (
                     hasattr(layer.layer, 'label') and
                     layer.layer.label.startswith("Subset") and
-                    hasattr(layer.layer.data, 'meta') and
                     layer.layer.data.meta.get("_WCS_ONLY", False)
                 ):
                     layer.visible = False
