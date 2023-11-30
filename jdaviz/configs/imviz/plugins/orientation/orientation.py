@@ -146,8 +146,8 @@ class Orientation(PluginTemplateMixin, ViewerSelectMixin):
         self.linking_in_progress = True
         self.wcs_use_fallback = msg.wcs_use_fallback
         self.wcs_use_affine = msg.wcs_use_affine
-        self.orientation.only_wcs_layers = self.link_type_selected == 'WCS'
-        self.orientation._on_layers_changed()
+        self.layer.only_wcs_layers = self.link_type.selected == 'WCS'
+        self.layer._on_layers_changed()
 
     def _link_image_data(self):
         link_image_data(
@@ -324,6 +324,13 @@ class Orientation(PluginTemplateMixin, ViewerSelectMixin):
         self.app._jdaviz_helper.load_data(
             ndd, data_label=label
         )
+        if self.link_type_selected == 'Pixels':
+            # this will trigger linking by wcs if not already selected:
+            self.link_type_selected = 'WCS'
+            self._update_link()
+
+        # changing link type has changed the traitlet, so we correct it:
+        self.orientation_layer_label.value = wcs_only_layer_label
 
         # add orientation layer to all viewers:
         self._add_data_to_all_viewers(label)
@@ -368,6 +375,26 @@ class Orientation(PluginTemplateMixin, ViewerSelectMixin):
             elif not len(viewer.data()):
                 self.link_type_selected = link_type_msg_to_trait['pixels']
 
+        self._reset_default_rotation_options()
+
+        # we never want to highlight subsets of pixels within WCS-only layers,
+        # so if this layer is an ImageSubsetLayerState on a WCS-only layer,
+        # ensure that it is never visible:
+        if hasattr(self, 'viewer'):
+            for layer in viewer.state.layers:
+                if (
+                    hasattr(layer.layer, 'label') and
+                    layer.layer.label.startswith("Subset") and
+                    hasattr(layer.layer.data, 'meta') and
+                    layer.layer.data.meta.get("_WCS_ONLY", False)
+                ):
+                    layer.visible = False
+
+    def _reset_default_rotation_options(self):
+        # return rotation options to these defaults:
+        self.east_left = True
+        self.rotation_angle = 0
+
     @property
     def ref_data(self):
         return self.app.get_viewer_by_id(self.viewer.selected).state.reference_data
@@ -403,10 +430,13 @@ class Orientation(PluginTemplateMixin, ViewerSelectMixin):
         """
         if label not in self.orientation.choices:
             degn = self._get_wcs_angles()[-3]
-            self.add_orientation(rotation_angle=degn, east_left=True,
-                                 label=label, set_on_create=set_on_create)
-        elif set_on_create:
-            self.orientation.selected = label
+            self.rotation_angle = degn
+            self.east_left = True
+            self.set_on_create = set_on_create
+            self.new_layer_label = label
+            self.vue_create_new_orientation_from_data()
+        if set_on_create:
+            self.layer.selected = label
 
     def create_north_up_east_right(self, label="North-up, East-right", set_on_create=False):
         """
@@ -415,10 +445,13 @@ class Orientation(PluginTemplateMixin, ViewerSelectMixin):
         """
         if label not in self.orientation.choices:
             degn = self._get_wcs_angles()[-3]
-            self.add_orientation(rotation_angle=180-degn, east_left=False,
-                                 label=label, set_on_create=set_on_create)
-        elif set_on_create:
-            self.orientation.selected = label
+            self.rotation_angle = 180 - degn
+            self.east_left = False
+            self.set_on_create = set_on_create
+            self.new_layer_label = label
+            self.vue_create_new_orientation_from_data()
+        if set_on_create:
+            self.layer.selected = label
 
     def vue_select_north_up_east_left(self, *args, **kwargs):
         self.create_north_up_east_left(set_on_create=True)
