@@ -120,16 +120,3 @@ class ViewerUserApi(UserApiWrapper):
 
     def __repr__(self):
         return f'<{self._obj.reference} API>'
-
-    def __getattr__(self, *args, **kwargs):
-        if super().__getattr__('_deprecation_msg'):
-            logging.warning(f"DeprecationWarning: {self._deprecation_msg}")
-            super().__setattr__('_deprecation_msg', None)
-        return super().__getattr__(*args, **kwargs)
-
-    def __setattr__(self, *args, **kwargs):
-        if hasattr(self, '_deprecation_msg') and self._deprecation_msg:
-            logging.warning(f"DeprecationWarning: {self._deprecation_msg}")
-            super().__setattr__('_deprecation_msg', None)
-        return super().__setattr__(*args, **kwargs)
-
