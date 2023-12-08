@@ -6,6 +6,7 @@ New Features
 
 Cubeviz
 ^^^^^^^
+
 - Calculated moments can now be output in velocity units. [#2584]
 
 - Added functionality to Collapse and Spectral Extraction plugins to save results to FITS file. [#2586]
@@ -16,12 +17,6 @@ Imviz
 
 - There is now option for image rotation in Orientation (was Links Control) plugin.
   This feature requires WCS linking. [#2179]
-
-- Aperture photometry (previously "Imviz Simple Aperture Photometry") now supports batch mode. [#2465]
-
-- Aperture photometry sum is now presented in scientific notation consistently. [#2530]
-
-- Expose sky regions in get_subsets. If 'include_sky_region' is True, a sky Region will be returned (in addition to a pixel Region) for spatial subsets with parent data that was a WCS. [#2496]
 
 Mosviz
 ^^^^^^
