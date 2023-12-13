@@ -69,7 +69,7 @@ class Orientation(PluginTemplateMixin, ViewerSelectMixin):
     need_clear_subsets = Bool(False).tag(sync=True)
 
     # rotation angle, counterclockwise [degrees]
-    rotation_angle = FloatHandleEmpty(0).tag(sync=True)
+    rotation_angle = FloatHandleEmpty(0, replace_with_default=True).tag(sync=True)
     east_left = Bool(True).tag(sync=True)  # set convention for east left of north
 
     icons = Dict().tag(sync=True)
@@ -268,13 +268,7 @@ class Orientation(PluginTemplateMixin, ViewerSelectMixin):
         if rotation_angle is None:
             rotation_angle = self.rotation_angle
 
-        if rotation_angle is not None:
-            if (
-                (isinstance(rotation_angle, str) and len(rotation_angle)) or
-                isinstance(rotation_angle, (int, float))
-            ):
-                return float(rotation_angle) * u.deg
-        return 0 * u.deg
+        return float(rotation_angle) * u.deg
 
     def add_orientation(self, rotation_angle=None, east_left=None, label=None,
                         set_on_create=True, wrt_data=None):
