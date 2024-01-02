@@ -1226,7 +1226,7 @@ class LayerSelect(SelectPluginComponent):
     * register with all the automatic logic in the plugin's init by passing the string names
       of the respective traitlets.
     * use component in plugin template (see below)
-    * refer to properties above based on the interally stored reference to the
+    * refer to properties above based on the internally stored reference to the
       instantiated object of this component
     * observe the traitlets created and defined in the plugin, as necessary
 
@@ -1265,7 +1265,6 @@ class LayerSelect(SelectPluginComponent):
             ``default`` text is provided but not in ``manual_options`` it will still be included as
             the first item in the list.
         """
-
         super().__init__(plugin,
                          items=items,
                          selected=selected,
@@ -1274,8 +1273,6 @@ class LayerSelect(SelectPluginComponent):
                          default_text=default_text,
                          manual_options=manual_options,
                          default_mode=default_mode)
-
-        self.only_wcs_layers = only_wcs_layers
 
         self.hub.subscribe(self, AddDataMessage,
                            handler=self._on_data_added)
@@ -1295,6 +1292,7 @@ class LayerSelect(SelectPluginComponent):
         self.add_observe(viewer, self._on_viewer_selected_changed)
         self.add_observe(selected, self._update_layer_items)
         self._update_layer_items()
+        self.set_wcs_only_filter(only_wcs_layers)
 
     def _get_viewer(self, viewer):
         # newer will likely be the viewer name in most cases, but viewer id in the case
@@ -1424,6 +1422,7 @@ class LayerSelect(SelectPluginComponent):
         manual_items = [{'label': label} for label in self.manual_options]
         # use getattr so the super() call above doesn't try to access the attr before
         # it is initialized:
+
         if not getattr(self, 'only_wcs_layers', False):
             all_layers = [
                 layer for viewer in self.viewer_objs
@@ -1448,7 +1447,7 @@ class LayerSelect(SelectPluginComponent):
         layer_labels = [
             layer.layer.label for layer in all_layers
             if self.app.state.layer_icons.get(layer.layer.label) or
-            getattr(self, 'only_wcs_layers', False)
+            self.only_wcs_layers
         ]
         unique_layer_labels = list(set(layer_labels))
         layer_items = [self._layer_to_dict(layer_label) for layer_label in unique_layer_labels]
@@ -1462,6 +1461,22 @@ class LayerSelect(SelectPluginComponent):
         self.items = manual_items + layer_items
 
         self._apply_default_selection()
+
+    def set_wcs_only_filter(self, wcs_only):
+        def is_wcs_only(data):
+            return data.meta.get(self.app._wcs_only_label, False)
+
+        filter_names = [getattr(filt, '__name__', '') for filt in self.filters]
+
+        if not wcs_only and 'is_wcs_only' in filter_names:
+            self.filters.remove(*[filt for filt in self.filters
+                                  if getattr(filt, '__name__', '') == 'is_wcs_only'])
+        elif wcs_only and 'is_wcs_only' not in filter_names:
+            self.add_filter(is_wcs_only)
+
+    @property
+    def only_wcs_layers(self):
+        return 'is_wcs_only' in [getattr(filt, '__name__', '') for filt in self.filters]
 
     @cached_property
     def selected_obj(self):
