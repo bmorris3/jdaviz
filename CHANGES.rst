@@ -28,6 +28,8 @@ Imviz
 - There is now option for image rotation in Orientation (was Links Control) plugin.
   This feature requires WCS linking. [#2179]
 
+- Add "Random" colormap for visualizing image segmentation maps [#2671]
+
 Mosviz
 ^^^^^^
 
