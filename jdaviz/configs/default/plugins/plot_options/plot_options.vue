@@ -439,11 +439,24 @@
             v-model="image_colormap_value"
             label="Colormap"
             dense
-          ></v-select>
-              <v-alert v-if="image_colormap_value == 'Random'" type='warning' style="margin-left: -12px; margin-right: -12px">
-                Note: on selecting the "Random" colormap, the stretch percentile preset
-                is set to min/max and the stretch function is set to linear.
-              </v-alert>
+          >
+            <template slot="item" slot-scope="data">
+              <div class="single-line" style="width: 100%">
+                <j-tooltip v-if="data.item.text === 'Random'" tooltipcontent="Selecting the 'Random' colormap will set the stretch percentile preset
+                to min/max, the stretch function to linear, and prevent manually changing either.">
+                  <span>
+                    {{ data.item.text }}
+                  </span>
+                  <v-icon>
+                    mdi-information-outline
+                  </v-icon>
+                </j-tooltip>
+                <span v-else>
+                  {{ data.item.text }}
+                </span>
+              </div>
+            </template>
+          </v-select>
         </glue-state-sync-wrapper>
         <glue-state-sync-wrapper v-if="image_color_mode_value !== 'Colormaps' || image_color_mode_sync['mixed']" :sync="image_color_sync" :multiselect="layer_multiselect" @unmix-state="unmix_state('image_color')">
           <div>
@@ -498,6 +511,7 @@
           v-model="stretch_function_value"
           label="Stretch Function"
           class="no-hint"
+          :disabled="image_colormap_value==='Random'"
         ></v-select>
       </glue-state-sync-wrapper>
 
@@ -509,6 +523,7 @@
           v-model="stretch_preset_value"
           label="Stretch Percentile Preset"
           class="no-hint"
+          :disabled="image_colormap_value==='Random'"
         ></v-select>
       </glue-state-sync-wrapper>
 
