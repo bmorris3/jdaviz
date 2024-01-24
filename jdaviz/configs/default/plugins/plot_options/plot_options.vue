@@ -510,8 +510,10 @@
           :items="stretch_function_sync.choices"
           v-model="stretch_function_value"
           label="Stretch Function"
-          class="no-hint"
           :disabled="image_colormap_value==='Random'"
+          :hint="image_colormap_value==='Random' ? 'Cannot set while colormap is set to Random': null"
+          persistent-hint
+          dense
         ></v-select>
       </glue-state-sync-wrapper>
 
@@ -522,8 +524,10 @@
           :items="stretch_preset_sync.choices"
           v-model="stretch_preset_value"
           label="Stretch Percentile Preset"
-          class="no-hint"
           :disabled="image_colormap_value==='Random'"
+          :hint="image_colormap_value==='Random' ? 'Cannot set while colormap is set to Random': null"
+          persistent-hint
+          dense
         ></v-select>
       </glue-state-sync-wrapper>
 
