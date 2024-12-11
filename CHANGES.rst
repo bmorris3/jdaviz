@@ -105,6 +105,8 @@ Bug Fixes
 
 - Raise an error when attempting to open in a popout or sidecar when not supported (i.e. within VSCode). [#3309]
 
+- Prevent image wrapping in Imviz with Roman L2 images with GWCS. [#2887]
+
 Cubeviz
 ^^^^^^^
 
