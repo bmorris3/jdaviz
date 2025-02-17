@@ -3,11 +3,12 @@ import os.path
 import astropy.units as u
 import solara
 from astroquery.mast.missions import MastMissions
-from traitlets import Bool, Unicode, observe
+from traitlets import Bool, Unicode, observe, Integer, Instance
 
 from jdaviz.core.registries import tray_registry
-from jdaviz.core.template_mixin import PluginTemplateMixin, TableMixin
+from jdaviz.core.template_mixin import PluginTemplateMixin, Table, TableMixin, with_spinner
 from astropy.coordinates import SkyCoord
+from astropy.table import QTable
 
 MastMissions.mission = 'jwst'
 mission_columns = MastMissions.get_column_list()
@@ -24,12 +25,41 @@ selected_uri = solara.reactive('')
 observations = solara.reactive(None)
 progress = solara.reactive(False)
 cell = solara.reactive({})
-
-# the `noqa` call is required to suppress warning from this rule:
-# https://solara.dev/documentation/advanced/understanding/rules-of-hooks
 button = None
-
 icon = solara.reactive('mdi-magnify')
+
+
+from traitlets import HasTraits
+
+
+class Counter(HasTraits):
+    """
+    This class has a `value` attr that increments
+    whenever the observation table gets updated,
+    and the value gets observed by the plugin. This allows
+    both the solara widget's buttons and the jdaviz vue buttons
+    to have the same effects.
+    """
+    value = Integer()
+
+    def __init__(self, val=0):
+        self.value = val
+
+
+counter = Counter()
+
+
+def default_table_cuts(table):
+    """
+    For now, return only calibrated science images.
+    """
+    cuts = (
+            (table['type'] == 'science') &
+            (table['file_suffix'] == '_cal') &
+            (table['access'] == 'PUBLIC')
+    )
+
+    return table[cuts]
 
 
 def _search_by_name():
@@ -43,9 +73,12 @@ def _search_by_name():
         limit=limit.value,
     )
     # get table of unique data products from above:
-    observations.value = MastMissions.get_unique_product_list(
-        products
+    observations.value = default_table_cuts(
+            MastMissions.get_unique_product_list(
+            products,
+        )
     )
+    counter.value += 1
     icon.set('mdi-magnify')
     progress.set(False)
 
@@ -66,11 +99,14 @@ def _cone_search():
     progress.set(True)
     icon.set('mdi-progress-clock')
     coord = SkyCoord(ra=targ_ra.value * u.deg, dec=targ_dec.value * u.deg)
-    observations.value = MastMissions.query_region(
-        coordinates=coord,
-        radius=radius.value * u.deg,
-        limit=limit.value
+    observations.value = default_table_cuts(
+            MastMissions.query_region(
+            coordinates=coord,
+            radius=radius.value * u.deg,
+            limit=limit.value,
+        )
     )
+    counter.value += 1
     icon.set('mdi-magnify')
     progress.set(False)
 
@@ -118,7 +154,7 @@ def FilterTable(df):
 @solara.component
 def Page():
     with solara.Column():
-        solara.Markdown("### Search")
+        # solara.Markdown("### Search")
         solara.Details("Search by name", [search_by_name()])
         solara.Details("Search by coord", [cone_search()])
         # if observations.value is not None:
@@ -139,6 +175,7 @@ class Mast(PluginTemplateMixin, TableMixin):
     context = Bool(False).tag(sync=True)
     file_set_name = Unicode().tag(sync=True)
     widget_model_id = Unicode().tag(sync=True)
+    table_selected_widget = Unicode().tag(sync=True)
 
     target_name = target_name
     targ_ra = targ_ra
@@ -146,45 +183,86 @@ class Mast(PluginTemplateMixin, TableMixin):
     radius = radius
     limit = limit
     observations = observations
+    n_obs = 0 if observations.value is None else len(observations.value)
+
+    # counter = Instance(klass=Counter, args=(2,))
 
     _uri = Unicode().tag(sync=True)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.set_notifiers()
 
         self._plugin_description = 'MAST plugin'
 
         self.widget = Page.widget()
         self.widget_model_id = 'IPY_MODEL_' + self.widget.model_id
+        self.table.item_key = 'uri'
 
+        # initializing the headers in the table that is displayed in the UI
+        # self.table.headers_avail = self.headers
+        # self.table.headers_visible = self.headers
+        # self.table._default_values_by_colname = self._default_table_values
         self.table._selected_rows_changed_callback = self._table_selection_changed
+        self.table.show_rowselect = True
+
+        def clear_table_callback():
+            # gets the current viewer
+            viewer = self.viewer.selected_obj
+
+            # resetting values
+            self.results_available = False
+            self.number_of_results = 0
+
+            if self._marker_name in self.app.data_collection.labels:
+                # all markers are removed from the viewer
+                viewer.remove_markers(marker_name=self._marker_name)
+
+        self.table._clear_callback = clear_table_callback
+
+        self.table_selected = Table(self, name='table_selected')
+        self.table_selected.clear_btn_lbl = 'Clear Selection'
+        self.table_selected.show_if_empty = False
+
+        def clear_selected_table_callback():
+            self.table.select_none()
+
+        self.table_selected._clear_callback = clear_selected_table_callback
+        self.table_selected_widget = 'IPY_MODEL_'+self.table_selected.model_id
+
+    def _table_selection_changed(self, msg={}):
+        selected_rows = self.table.selected_rows
+
+        self.table_selected._clear_table()
+        for selected_row in selected_rows:
+            self.table_selected.add_item(selected_row)
 
     def search_by_name(self):
         _search_by_name()
-        self.table._qtable = observations.value
+        self._update_table()
 
     def cone_search(self):
         _cone_search()
-        self.table._qtable = observations.value
+        self._update_table()
 
-    # @property
-    # def uri(self):
-    #     return self._uri
-    #
-    # @uri.setter
-    # def uri(self, value):
-    #     print(f'set uri to {value}')
-    #     selected_uri.set(value)
-    #     self._uri = value
+    @with_spinner()
+    def vue_load_images(self, event):
+        uris_to_load = list(self.table_selected._qtable['uri'])
 
-    @observe('_uri')
-    def _load_uri(self):
-        print(f'load uri {self._url}')
-        local_path = os.path.basename(self._url)
-        status, msg, url = MastMissions.download_file(
-            uri=self.uri,
-            local_path=local_path
-        )
-        print(f'{status=}')
-        print(f'{url=}')
-        self.app.load_data(local_path, show_in_viewer='imviz-0')
+        for uri in uris_to_load:
+            local_path = os.path.basename(uri)
+            status, msg, url = MastMissions.download_file(
+                uri=uri,
+                local_path=local_path
+            )
+            print(f"{local_path=}")
+            self.app._jdaviz_helper.load_data(local_path)
+
+        self.table_selected.clear_table()
+
+    def set_notifiers(self):
+        HasTraits.observe(counter, self._update_table, 'value')
+
+    def _update_table(self, value=None):
+        print(f"change {value=}")
+        self.table.add_item(QTable(observations.value))
