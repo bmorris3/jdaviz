@@ -9,3 +9,4 @@ from .aper_phot_simple import *  # noqa
 from .line_profile_xy import *  # noqa
 from .catalogs import *  # noqa
 from .footprints import *  # noqa
+from .mast import *  # noqa

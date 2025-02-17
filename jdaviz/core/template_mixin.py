@@ -202,6 +202,105 @@ class WithCache:
                 del self.__dict__[attr]
 
 
+
+class TemplateMixinNoVue(HubListener, ViewerPropertiesMixin, WithCache):
+    config = Unicode("").tag(sync=True)
+    vdocs = Unicode("").tag(sync=True)
+    api_hints_enabled = Bool(False).tag(sync=True)
+    popout_button = Any().tag(sync=True, **widget_serialization)
+
+    def __new__(cls, *args, **kwargs):
+        """
+        Overload object creation so that we can inject a reference to the
+        `~glue.core.hub.Hub` class before components can be initialized. This makes it so
+        hub references on plugins can be passed along to components in the
+        call to the initialization method.
+        """
+        app = kwargs.pop('app', None)
+        obj = super().__new__(cls, *args, **kwargs)
+        obj._app = app
+
+        # give the vue templates access to the current config/layout
+        obj.config = app.state.settings.get("configuration", "default")
+
+        # give the vue templates access to jdaviz version
+        obj.vdocs = app.vdocs
+
+        # store references to all bqplot widgets that need to handle resizing
+        obj.bqplot_figs_resize = []
+
+        return obj
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.popout_button = PopoutButton(
+            PopoutStyleWrapper(content=self),
+            window_features='popup,width=400,height=600'
+        )
+        self._viewer_callbacks = {}
+        self.hub.subscribe(self, ViewerRemovedMessage,
+                           handler=lambda msg: self._remove_viewer_callbacks(msg.viewer_id))
+
+        self.app.state.add_callback('show_api_hints', self._update_api_hints_enabled)
+        self._update_api_hints_enabled()
+
+    @property
+    def app(self):
+        """
+        Allows access to the underlying Jdaviz application instance. This is
+        **not** access to the helper class, but instead the
+        `jdaviz.app.Application` object.
+        """
+        return self._app
+
+    @property
+    def hub(self):
+        return self._app.session.hub
+
+    @property
+    def session(self):
+        return self._app.session
+
+    @property
+    def data_collection(self):
+        return self._app.session.data_collection
+
+    @property
+    def _specviz_helper(self):
+        # for helpers that have a .specviz, return that, otherwise the original helper
+        helper = self.app._jdaviz_helper
+        return getattr(helper, 'specviz', helper)
+
+    def _viewer_callback(self, viewer, plugin_method):
+        """
+        Cached access to callbacks to a plugin method to attach to a viewer.
+        To define a callback:
+        def _on_callback(self, viewer, data):
+        To add callback:
+        viewer.add_event_calback(self._viewer_callback(viewer, self._on_callback),
+                                 events=['keydown'])
+        To remove callback:
+        viewer.remove_event_callback(self._viewer_callback(viewer, self._on_callback))
+        """
+        def plugin_viewer_callback(viewer, plugin_method):
+            return lambda data: plugin_method(viewer, data)
+
+        key = f'{viewer.reference_id}:{plugin_method.__name__}'
+        if key not in self._viewer_callbacks.keys():
+            self._viewer_callbacks[key] = plugin_viewer_callback(viewer, plugin_method)
+        return self._viewer_callbacks.get(key)
+
+    def _remove_viewer_callbacks(self, viewer_id):
+        # removes the cache of a callback when a viewer is removed (the viewer object is already
+        # assumed destroyed, so we do not need to remove the event callback itself from the viewer)
+        self._viewer_callbacks = {k: v for k, v in self._viewer_callbacks.items()
+                                  if k.split(':')[0] != viewer_id}
+
+    def _update_api_hints_enabled(self, *args):
+        self.api_hints_enabled = self.app.state.show_api_hints
+
+
+
 class TemplateMixin(VuetifyTemplate, HubListener, ViewerPropertiesMixin, WithCache):
     config = Unicode("").tag(sync=True)
     vdocs = Unicode("").tag(sync=True)

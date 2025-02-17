@@ -19,6 +19,7 @@ toolbar:
   - g-image-viewer-creator
   - g-coords-info
 tray:
+  - mast
   - g-metadata-viewer
   - imviz-orientation
   - g-plot-options
