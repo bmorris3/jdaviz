@@ -1,4 +1,4 @@
-from traitlets import Bool, List, Unicode, observe
+from traitlets import Bool, List, Unicode, observe, Any
 import numpy as np
 import os
 import regions
@@ -15,7 +15,8 @@ from jdaviz.core.region_translators import is_stcs_string, regions2roi, stcs_str
 from jdaviz.core.registries import tray_registry
 from jdaviz.core.template_mixin import (PluginTemplateMixin, ViewerSelectMixin,
                                         EditableSelectPluginComponent, SelectPluginComponent,
-                                        FileImportSelectPluginComponent, HasFileImportSelect)
+                                        FileImportSelectPluginComponent, HasFileImportSelect, TableMixin)
+
 from jdaviz.core.tools import ICON_DIR
 from jdaviz.core.user_api import PluginUserApi
 
@@ -113,8 +114,24 @@ def find_closest_polygon_point(px, py, polygons):
     return closest_overlay, closest_point
 
 
-@tray_registry('imviz-footprints', label="Footprints")
-class Footprints(PluginTemplateMixin, ViewerSelectMixin, HasFileImportSelect):
+import solara
+
+
+class _FixedFootprints(PluginTemplateMixin, TableMixin):
+    template_file = __file__, "fixed_footprints.vue"
+
+    def __init__(self, *args, **kwargs):
+        self._ignore_traitlet_change = False
+        self._overlays = {}
+
+        super().__init__(*args, **kwargs)
+
+        # description displayed under plugin title in tray
+        self._plugin_description = 'Show instrument footprints as overlays on image viewers.'
+        self.table.show_rowselect = True
+
+
+class _Footprints(PluginTemplateMixin, ViewerSelectMixin, HasFileImportSelect):
     """
     See the :ref:`Footprints Plugin Documentation <imviz-footprints>` for more details.
 
@@ -755,3 +772,57 @@ class Footprints(PluginTemplateMixin, ViewerSelectMixin, HasFileImportSelect):
 
             if overlay_selected == self.overlay_selected:
                 self._highlight_overlay(self.overlay_selected, viewers=[viewer])
+
+
+@tray_registry('imviz-footprints', label="Footprints")
+class Footprints(PluginTemplateMixin):
+    """
+    the proposed tabbed footprints plugin will have:
+
+    1) a tab for "editable" footprints (final name TBD) which contains
+       the Footprints plugin as it currently exists on main
+    2) a tab for "fixed" footprints (final name TBD) which has a PluginSelectTable
+       of MAST footprints loaded by the user via API from astroquery.mast queries
+    3) the "fixed" tab can have a "Download" button that downloads the data
+       for all selected footprints from MAST
+
+    here we combine the editable+fixed components into one Footprints plugin
+    tray item, but the fixed footprints interface can move into the loaders
+    framework instead, as needed.
+    """
+    template_file = __file__, "top-level-footprints.vue"
+
+    editable = None
+    fixed = None
+    combined_widget = None
+
+    def __init__(self, *args, **kwargs):
+
+        # description displayed under plugin title in tray
+        self.plugin_description = 'Show instrument footprints as overlays on image viewers.'
+
+        self.editable = _Footprints(app=kwargs['app'])
+        self.api_methods = []
+        self.irrelevant_msg = ""
+        self.fixed = _FixedFootprints(app=kwargs['app'])
+
+        @solara.component
+        def Page():
+            with solara.lab.Tabs(grow=True, background_color='b'):
+                with solara.lab.Tab("Editable"):
+                    solara.display(self.editable)
+                with solara.lab.Tab("Fixed"):
+                    solara.display(self.fixed)
+
+        combined = Page()
+        self.combined_widget = combined.component.widget()
+        super().__init__(*args, **kwargs)
+
+    @property
+    def model_id(self):
+        return self.combined_widget.model_id
+
+    @property
+    def user_api(self):
+        return PluginUserApi(self, expose=('fixed',
+                                           'editable'))
