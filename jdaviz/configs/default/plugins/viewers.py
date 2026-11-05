@@ -401,7 +401,12 @@ class JdavizViewerMixin(WithCache):
             edit_subset_mode._mode = ReplaceMode
 
         try:
-            super().apply_roi(roi, use_current=use_current)
+            excluded_subset_types = getattr(self, '_excluded_subset_types', [])
+            can_apply_roi = not all(
+                subset_type in excluded_subset_types for subset_type in ['spectral', 'spatial']
+            )
+            if can_apply_roi:
+                self.apply_roi(roi, use_current=use_current)
         finally:
             if needs_override:
                 edit_subset_mode._mode = original_mode
